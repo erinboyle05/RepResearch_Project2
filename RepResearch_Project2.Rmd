@@ -1,0 +1,16 @@
+---
+title: "RepResearch Project 2"
+author: "Erin Boyle"
+date: "March 10, 2016"
+output: html_document
+---
+
+#Title
+
+##Synopsis
+
+##Data Processing
+
+##Results
+
+##Conclusion
