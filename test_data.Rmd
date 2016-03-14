@@ -1,0 +1,21 @@
+---
+title: "Untitled"
+author: "Erin Boyle"
+date: "March 11, 2016"
+output: html_document
+---
+
+```{r}
+require(dplyr)
+require(tidyr)
+storm_data <- read.csv("storm_data.csv.bz2")
+
+storm_data$EVTYPE <- storm_data$EVTYPE %>%
+        as.character() %>%
+        toupper()
+
+storm_data$EVTYPE <- gsub("/"," ", storm_data$EVTYPE) 
+
+test_data <- count(storm_data, EVTYPE)
+print(test_data)
+```
