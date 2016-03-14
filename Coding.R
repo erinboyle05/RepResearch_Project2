@@ -23,23 +23,34 @@ storm_data$EVTYPE <- storm_data$EVTYPE %>%
 
 storm_data$EVTYPE <- gsub("/"," ", storm_data$EVTYPE) 
 
-test_data <- storm_data %>%
-        group_by(EVTYPE) %>%
-        summarize(FATALITIES = sum(FATALITIES), INJURIES = sum(INJURIES), Total = sum(FATALITIES, INJURIES)) %>%
-        filter(FATALITIES > 0 | INJURIES > 0)
-
 storm_data$EVTYPE <- gsub(".*TORNADO.*", "TORNADO", storm_data$EVTYPE)
 storm_data$EVTYPE <- gsub(".*THUNDERST.*", "THUNDERSTORM", storm_data$EVTYPE)
 storm_data$EVTYPE <- gsub(".*TSTM.*", "THUNDERSTORM", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*AVALA.*", "AVALANCHE", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*FLASH.*", "FLASH FLOOD", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*LIGHTN.*", "LIGHTNING", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub("FLOOD.*", "FLOOD", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*WINTE.*", "WINTER STORM", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*HURRICANE.*", "HURRICANE", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*TYPHOON.*", "HURRICANE", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*SNOW.*", "WINTER STORM", storm_data$EVTYPE)
 
-# from <- list(c("TORNADO F2","TORNADO F3","TORNADOES, TSTM WIND, HAIL"),
-#              c("DROUGHT EXCESSIVE HEAT","HYPERTHERMIA EXPOSURE","RECORD EXCESSIVE HEAT"),
-#              C())
-# to <- c("TORNADO", "EXCESSIVE HEAT")
+# from <- list(".*TORNADO.*", ".*THUNDERST.*", ".*TSTM.*",".*AVALA.*", ".*FLASH.*",
+#       ".*LIGHTN.*", "FLOOD.*", ".*WINTE.*", ".*HURRICANE.*", ".*TYPHOON.*",".*SNOW.*"
+#             )
+# to <- c("TORNADO","THUNDERSTORM","THUNDERSTORM","AVALANCHE","FLASH FLOOD","LIGHTNING",
+#       "FLOOD", "WINTER STORM", "HURRICANE","HURRICANE", "WINTER STORM")
 # 
 # find.in.list <- function(x, y) match(TRUE, sapply(y, `%in%`, x = x))
 # idx.in.list  <- sapply(levels(storm_data$EVTYPE), find.in.list, from)
 # levels(storm_data$EVTYPE)  <- ifelse(is.na(idx.in.list), levels(storm_data$EVTYPE), to[idx.in.list])
+
+
+
+test_data <- storm_data %>%
+        group_by(EVTYPE) %>%
+        summarize(FATALITIES = sum(FATALITIES), INJURIES = sum(INJURIES), Total = sum(FATALITIES, INJURIES)) %>%
+        filter(FATALITIES > 0 | INJURIES > 0)
 
 q1_data <- storm_data %>%
         group_by(EVTYPE) %>%
