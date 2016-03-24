@@ -2,7 +2,9 @@
 title: "RepResearch Project 2"
 author: "Erin Boyle"
 date: "March 10, 2016"
-output: html_document
+output: 
+  html_document: 
+    number_sections: yes
 ---
 
 #Title
@@ -10,6 +12,191 @@ output: html_document
 ##Synopsis
 
 ##Data Processing
+
+###Cleaning the Data
+
+The raw storm data file was downloaded and read into R.  To save time and prevent multiple downloads, both the file and the R element containing the data are only called if they don't already exist:
+
+```{r cache=TRUE}
+if (!file.exists("storm_data.csv.bz2")) {
+
+        file_url <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
+        download.file(file_url, "storm_data.csv.bz2", mode = "wb")
+        dltimestamp <- Sys.time()
+}
+
+if (!exists("storm_data")) {
+storm_data <- read.csv("storm_data.csv.bz2")
+}
+```
+
+The structure of this data:
+
+```{r}
+str(storm_data)
+```
+
+We will be concentrating our analysis on only a few of the variables:
+
+```{r cache=TRUE}
+storm_data <- select(storm_data, EVTYPE, FATALITIES, INJURIES, PROPDMG, PROPDMGEXP,CROPDMG, CROPDMGEXP)
+```
+
+
+This data contains events from 1950 through November 2011.  Over the course of these years, the instructions and guidelines for reporting for this database has changed.  As such, the events in the EVTYPES may not conform to current guidelines and can make analysis difficult:
+
+```{r}
+length(unique(storm_data$EVTYPE))
+```
+
+To ensure that the case of the entries did not interfere with analysis, all values for EVTYPE, PROPDMGEXP, and CROPDMGEXP are changed into uppercase.  All slashes were replaced with spaces as well:
+
+```{r}
+storm_data$EVTYPE <- storm_data$EVTYPE %>%
+        toupper() %>%
+        as.factor()
+
+storm_data$PROPDMGEXP <- toupper(storm_data$PROPDMGEXP)
+storm_data$CROPDMGEXP <- toupper(storm_data$CROPDMGEXP)
+
+storm_data$EVTYPE <- gsub("/"," ", storm_data$EVTYPE) 
+```
+
+Before beginning analysis, to is prudent to adjust the events, allowing similar events to be analyzed together. To do this, I used Table 2.1.1 from the National Weather Service Instruction 10-1605 to guide my adjustments:
+
+![](/event_table.png)
+
+As we can see, weather events that occur at sea are given separate event names.  To simplify this, I have combined these into the event "MARINE". Additionally, events where excessive flooding or sudden flooding occurred were combined into the event "FLASH FLOOD", all others (except coastal flooding and lakeshore flooding) were given a "FLOOD" event.  In the dataset, hurricanes are listed by name, therefore I stripped the names to allow analysis of all hurricanes equally:
+
+```{r cache=TRUE}
+storm_data$EVTYPE <- gsub(".*TORNADO.*", "TORNADO", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*TORNDAO.*", "TORNADO", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*THUNDER.*", "THUNDERSTORM WIND", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*TSTM.*", "THUNDERSTORM WIND", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*AVALA.*", "AVALANCHE", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*LIGHTN.*", "LIGHTNING", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub("FLOOD.*", "FLOOD", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*FLASH.*", "FLASH FLOOD", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*WINT.*", "WINTER STORM", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*HURR.*", "HURRICANE", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*TYPHOON.*", "HURRICANE", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*SNOW.*", "WINTER STORM", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*TROPI.*", "TROPICAL STORM", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*FIRE.*", "WILDFIRE", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*FOG.*", "DENSE FOG", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*MARINE.*", "MARINE", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*WIND.*", "HIGH WIND", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*COLD.*", "COLD", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*HEAT.*", "HEAT", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*BLACK.*", "WINTER WEATHER", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub("ICE.*", "WINTER WEATHER", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub("ICY.*", "WINTER WEATHER", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*SURF.*", "HIGH SURF", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*WARM.*", "HEAT", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*GLAZE.*", "WINTER WEATHER", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*ICE.*", "WINTER WEATHER", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*FREEZING.*", "WINTER WEATHER", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*RAIN.*", "HEAVY RAIN", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*SEAS.*", "HIGH SURF", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*CURRENT.*", "RIP CURRENT", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*HYPO.*", "COLD", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*HYPER.*", "HEAT", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*RISING.*", "FLASH FLOOD", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*COASTAL.*FLOO.*", "COASTAL FLOOD", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*LOW.*", "COLD", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*MIXED.*", "SLEET", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*ROGUE.*", "MARINE", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*HIGH WA.*", "FLOOD", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*DROWNING.*", "OTHER", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*SWEL.*", "HIGH SURF", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*CSTL.*", "COSTAL FLOOD", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*SLIDE.*", "DEBRIS FLOW", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*MICRO.*", "HIGH WIND", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*FLD.*", "FLOOD", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*TID.*", "STORM SURGE", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*FREEZE.*", "FROST/FREEZE", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*FROST.*", "FROST/FREEZE", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*HAIL.*", "HAIL", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*RIVER.*", "FLOOD", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*MINOR.*", "FLOOD", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*STREAM.*", "FLOOD", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*WETNESS.*", "HEAVY RAIN", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*MAJOR.*", "FLOOD", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*WATERSPOUT.*", "WATERSPOUT", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*WAYTERSPOUT.*", "WATERSPOUT", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*WATER SPOUT.*", "WATERSPOUT", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*BEACH.*", "BEACH EROSION", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*BLIZZARD.*", "BLIZZARD", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*FUNNEL.*", "FUNNEL CLOUD", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*HEAVY PRECIP.*", "HEAVY RAIN", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*EXCESSIVE PRECIP.*", "HEAVY RAIN", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*DRY.*", "DROUGHT", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*DUST D.*", "DUST DEVIL", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*DUST.*S.*", "DUST STORM", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*SHOWER*", "HEAVY RAIN", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*HEAVY RAIN.*", "HEAVY RAIN", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*HOT.*", "HEAT", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*HIGH TEMP.*", "HEAT", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*LIGHT.*", "LIGHTNING", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*LIGN.*", "LIGHTNING", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*DAM.*", "FLASH FLOOD", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*BREAK.*", "FLASH FLOOD", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*LAKE.*FLOOD.*", "LAKESHORE FLOOD", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*GUSTNA.*", "THUNDERSTORM WIND", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*RECORD HIGH.*", "HEAT", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*SLEET.*", "SLEET", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*WND.*", "STRONG WIND", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*VOLCAN.*", "VOLCANIC ASH", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*VOG.*", "DENSE FOG", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*URBAN.*", "FLOOD", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*RURAL.*", "FLOOD", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*STREET.*", "FLOOD", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*COST.*", "COASTAL FLOOD", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*COASTAL.*S.*", "MARINE", storm_data$EVTYPE)
+storm_data$EVTYPE <- gsub(".*COASTAL ERO.*", "MARINE", storm_data$EVTYPE)
+```
+
+Taking a look at the number of unique values in EVTYPE, we can see that the number has been greatly reduced:
+
+```{r}
+length(unique(storm_data$EVTYPE))
+```
+
+In this dataset, the values for "PROPDMG" and "CROPDMG" are to be multiplied by the values of "PROPDMGEXP" and "CROPDMGEXP", respectively, when reading.  As the exponents/magnitudes differ, in order to accuratly compare damage costs, the exponents/magnitudes were first translated into their full numeric form (i.e. K = 1000):
+
+```{r}
+storm_data$PROPDMGEXP <- gsub("0", "1", storm_data$PROPDMGEXP)
+storm_data$PROPDMGEXP <- gsub("B", "1000000", storm_data$PROPDMGEXP)
+storm_data$PROPDMGEXP <- gsub("K", "1000", storm_data$PROPDMGEXP)
+storm_data$PROPDMGEXP <- gsub("M", "100000", storm_data$PROPDMGEXP)
+storm_data$PROPDMGEXP <- gsub("H", "100", storm_data$PROPDMGEXP)
+storm_data$PROPDMGEXP <- gsub("2", "100", storm_data$PROPDMGEXP)
+storm_data$PROPDMGEXP <- gsub("3", "1000", storm_data$PROPDMGEXP)
+storm_data$PROPDMGEXP <- gsub("4", "10000", storm_data$PROPDMGEXP)
+storm_data$PROPDMGEXP <- gsub("5", "100000", storm_data$PROPDMGEXP)
+storm_data$PROPDMGEXP <- gsub("6", "1000000", storm_data$PROPDMGEXP)
+storm_data$PROPDMGEXP <- gsub("7", "10000000", storm_data$PROPDMGEXP)
+storm_data$PROPDMGEXP <- gsub("-", "1", storm_data$PROPDMGEXP)
+
+storm_data$CROPDMGEXP <- gsub("0", "1", storm_data$CROPDMGEXP)
+storm_data$CROPDMGEXP <- gsub("B", "1000000", storm_data$CROPDMGEXP)
+storm_data$CROPDMGEXP <- gsub("K", "1000", storm_data$CROPDMGEXP)
+storm_data$CROPDMGEXP <- gsub("M", "100000", storm_data$CROPDMGEXP)
+```
+
+The class of both "PROPDMGEXP" and "CROPDMGEXP" were also changed to numberic to facilitate future calculations.  In doing so, missing values were coersered into NA's.  These were then replaced with "1":
+
+```{r}
+storm_data$CROPDMGEXP <- as.numeric(storm_data$CROPDMGEXP)
+storm_data$PROPDMGEXP <- as.numeric(storm_data$PROPDMGEXP)
+
+storm_data$PROPDMGEXP[is.na(storm_data$PROPDMGEXP)] <- 1
+storm_data$CROPDMGEXP[is.na(storm_data$CROPDMGEXP)] <- 1
+```
+
+###Calculating the Human Cost
+
+
 
 ##Results
 
